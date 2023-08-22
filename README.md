@@ -44,7 +44,7 @@
 
 ## 编译设置
 
-1. Release进行编译，设置为MT，/arch：x64，生成的文件是**DAT**后缀的。
+1. Release进行编译，设置为MT、/arch：x64、**语言标准选择C++ 17**，生成的文件是**DAT**后缀的。
 2. 若你的vs2022有安装集成[Arkari](https://github.com/KomiMoe/Arkari)，那么免杀效果更好，没有的话，普通生成即可。
 3. 选择不生成Debug调试信息和清单文件。
 
