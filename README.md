@@ -20,7 +20,7 @@
 2. 加入Hex、Base64（自定义）加密算法，保留原本的流加密算法，以当前时间戳为key，进行对URL加密，将其保存在资源节中。
 3. 木马名称随机化，加上流加密算法，使得每次生成的木马md5都不一样。
 4. 加入了AES（外部传key）、Base64（自定义）、RC4（自定义）算法加密解密Shellcode。
-5. 高危Windows API，全部采用动态加载的方式，能够使用NT函数替换的全部进行了替换，部分模板的函数进行了UnhookPatch。
+5. 高危Windows API，全部采用动态加载的方式，能够使用NT函数替换的全部进行了替换，部分模板的函数API进行了UnhookPatch。
 6. 针对卡巴斯基、Norton等对内存查杀较严的杀软，采取IAT Hook和VEH Hook对Beacon进行内存加密+配合C2profile的Sleep_mask选项和自定义通信方式基本无解。
 7. 针对Norton、360qvm等静态查杀较严的杀软，使用Arkari进行代码混淆。
 8. 增强完善了反沙箱、反调试。
