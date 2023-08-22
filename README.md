@@ -243,7 +243,6 @@ QVM引擎（很疯狂，大部分时候真不是代码问题）需要做和Norto
 4. 修改框架输入，实现输入一个URL即可生成。
 
 
-
 ### 4.0版本
 
 1. 增加memoryMapInjection+Syscall+Ntdll、Function+VEH Hook Load两个模板。
@@ -254,12 +253,10 @@ QVM引擎（很疯狂，大部分时候真不是代码问题）需要做和Norto
 5. 修改生成器的缓冲区bug。
 
 
-
 ### 5.0版本（开源）
 
 1. APC-Injetc+Ntdll进行改进使用NT函数进行APC注入，bypass卡巴动态。
-1. 增加输入自定义AES Key的功能。
-
+2. 增加输入自定义AES Key的功能。
 
 
 ## 注意事项
