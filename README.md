@@ -60,7 +60,7 @@
 2. 生成的beacon.bin放入程序目录下，然后运行命令加密，AES key可以自定义（256bit）。
 
    ```shell
-   AES_RC4_Shellcode bin文件 AES key
+   encbin.exe bin文件 AES key
    ```
 
    
@@ -132,14 +132,6 @@ QVM引擎（很疯狂，大部分时候真不是代码问题）需要做和Norto
 ### McAfee
 
 ![image-20230815231506639](./assets/image-20230815231506639.png)
-
-
-
-### Symantec
-
-和Norton一样，静态疯狂换白程序资源就行了
-
-![image-20230818160221352](./assets/image-20230818160221352.png)
 
 
 
