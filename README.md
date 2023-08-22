@@ -136,10 +136,11 @@ QVM引擎（很疯狂，大部分时候真不是代码问题）需要做和Norto
 
 
 ## 单个免杀效果
+部分杀软需要添加白程序的签名、版权信息等，如Norton、360、Symantec。
 
 #### APC-Injetc+Ntdll
 
-**bypass**：金山（数字签名）、火绒、ESET、360全家桶（物理机）、WDF（PC）、McAfee（Adobe程序信息）、卡巴企业版（时间5s 抖动50 Sleep_mask）
+**bypass**：金山（数字签名）、火绒、ESET、360全家桶（物理机）、WDF（PC）、McAfee、卡巴企业版（时间5s 抖动50 Sleep_mask）
 
 **nobypass**：WDF（服务器无法上线）、Norton（静态）
 
