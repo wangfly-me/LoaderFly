@@ -248,10 +248,8 @@ QVM引擎（很疯狂，大部分时候真不是代码问题）需要做和Norto
 
 1. 增加memoryMapInjection+Syscall+Ntdll、Function+VEH Hook Load两个模板。
 2. 删除失效报毒的反沙箱、调试代码。
-
 3. 减少解密算法冗余。
-4. 自定义AES KEY传入，提升快速免杀能力。
-5. 修改生成器的缓冲区bug。
+4. 修改生成器的缓冲区bug。
 
 
 ### 5.0版本（开源）
