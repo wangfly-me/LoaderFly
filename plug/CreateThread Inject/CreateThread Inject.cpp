@@ -26,7 +26,6 @@ BOOL isItHooked(LPVOID addr)
 	return FALSE;
 }
 
-//int main()
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR    lpCmdLine, _In_ int       nCmdShow)
 {    
 	//1.Get shellcode and shellcodesize from Resource by ID
