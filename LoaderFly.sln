@@ -44,6 +44,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "assets", "assets", "{81BF62
 		assets\image-20230822232413254.png = assets\image-20230822232413254.png
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CreateThread+PathEtw Inject", "plug\CreateThread Inject\CreateThread Inject.vcxproj", "{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -76,6 +78,14 @@ Global
 		{44ED408B-59F3-4A73-BEF3-AD7F274AEC54}.Release|x64.Build.0 = Release|x64
 		{44ED408B-59F3-4A73-BEF3-AD7F274AEC54}.Release|x86.ActiveCfg = Release|Win32
 		{44ED408B-59F3-4A73-BEF3-AD7F274AEC54}.Release|x86.Build.0 = Release|Win32
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Debug|x64.ActiveCfg = Debug|x64
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Debug|x64.Build.0 = Debug|x64
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Debug|x86.ActiveCfg = Debug|Win32
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Debug|x86.Build.0 = Debug|Win32
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Release|x64.ActiveCfg = Release|x64
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Release|x64.Build.0 = Release|x64
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Release|x86.ActiveCfg = Release|Win32
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -87,6 +97,7 @@ Global
 		{1B85DF4E-45D1-48A3-ACD7-EFA68ADC81BF} = {AEBA1494-45D5-49F3-B3A6-36277E38D27D}
 		{44ED408B-59F3-4A73-BEF3-AD7F274AEC54} = {A627454C-01C6-4811-871A-28194598E2C9}
 		{81BF62F0-8C81-496A-987C-04E901A10B33} = {27F274D1-807B-4717-9AE6-91B5DB468233}
+		{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95} = {CA099911-8087-4632-96A5-A85511712F38}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {EDBB30E9-A5B4-42A1-B5ED-78754D7540E5}
