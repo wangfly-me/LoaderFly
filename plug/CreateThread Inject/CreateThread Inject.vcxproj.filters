@@ -4,10 +4,18 @@
     <Filter Include="源文件">
       <UniqueIdentifier>{44f453c4-fe07-41d2-8797-66f066b1b12e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{cd33d635-51c8-4f15-9378-2aafaebab360}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CreateThread Inject.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="RCData100.res">
+      <Filter>资源文件</Filter>
+    </Resource>
   </ItemGroup>
 </Project>

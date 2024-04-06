@@ -213,13 +213,16 @@ void CshellcodeLoaderDlg::OnBnClickedGenerate()
 	wchar_t filepath[MAX_PATH] = { 0 };
 	SHGetSpecialFolderPath(0, filepath, CSIDL_DESKTOPDIRECTORY, 0);
 	
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	int minNumber = 1;
-	int maxNumber = 100;
-	std::uniform_int_distribution<int> dist(minNumber, maxNumber);
-	int randomNumber = dist(gen);
-	std::string filename = "\\sovha" + std::to_string(randomNumber) + ".exe";
+	std::string charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	std::string randomString;
+	std::srand(std::time(nullptr));  // 初始化随机数生成器
+	int length = 6;
+	for (int i = 0; i < length; i++) {
+		int randomIndex = std::rand() % charset.length();  // 生成随机索引
+		randomString += charset[randomIndex];  // 将随机字符添加到字符串中
+	}
+
+	std::string filename = "\\" + randomString + ".exe";
 	std::wstring wideFilename(filename.begin(), filename.end());
 	StrCatW(filepath, wideFilename.c_str());
 

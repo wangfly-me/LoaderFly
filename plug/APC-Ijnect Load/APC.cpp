@@ -1,5 +1,4 @@
 #include "..\public.hpp"
-#include <vector>
 #include <psapi.h>
 #include "ntdll.h"
 

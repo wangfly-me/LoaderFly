@@ -218,7 +218,7 @@ std::string generateRandomString(int length)
 
 int main(int argc,char* argv[])
 {
-	//Bw4T9mvouk^rlR@A
+	//&4UqzVfk8Alr9B^v
 	string rc4Key = generateFixedString(12468);
 	// ¶ÁÈ¡beacon.binÎÄ¼ş
 	ifstream inputFile(argv[1], ios::binary);

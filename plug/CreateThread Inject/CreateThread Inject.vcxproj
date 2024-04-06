@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="CreateThread Inject.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="RCData100.res" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{CE3FFC5A-ED48-43DC-9C54-4EFCD5733B95}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -89,6 +92,7 @@
     <OutDir>$(SolutionDir)\$(Configuration)\DATA\64</OutDir>
     <TargetExt>.DAT</TargetExt>
     <GenerateManifest>false</GenerateManifest>
+    <EmbedManifest>false</EmbedManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -139,12 +143,17 @@
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
